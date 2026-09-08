@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Điểm danh Rước Lễ 2B</title>
+
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    h1 {
+      font-size: 24px;
+    }
+
+    #reader {
+      width: 100%;
+      max-width: 450px;
+      margin: 20px auto;
+      background: white;
+      border-radius: 12px;
+      padding: 10px;
+    }
+
+    #result {
+      margin: 20px auto;
+      max-width: 450px;
+      padding: 15px;
+      background: white;
+      border-radius: 12px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>📋 ĐIỂM DANH RƯỚC LỄ 2B</h1>
+
+  <p>Đưa mã QR của các em vào khung quét</p>
+
+  <div id="reader"></div>
+
+  <div id="result">
+    ⏳ Đang chờ quét...
+  </div>
+
+  <script>
+
+    function onScanSuccess(decodedText) {
+
+      document.getElementById("result").innerHTML =
+        "✅ Đã quét mã: <b>" + decodedText + "</b>";
+
+    }
+
+    function onScanFailure(error) {
+      // Không làm gì khi chưa nhận diện được mã
+    }
+
+    const scanner = new Html5QrcodeScanner(
+      "reader",
+      {
+        fps: 10,
+        qrbox: {
+          width: 250,
+          height: 250
+        }
+      },
+      false
+    );
+
+    scanner.render(onScanSuccess, onScanFailure);
+
+  </script>
+
+</body>
+</html>
