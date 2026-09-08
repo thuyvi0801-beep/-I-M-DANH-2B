@@ -54,11 +54,40 @@
   <script>
 
     function onScanSuccess(decodedText) {
+  document.getElementById("result").innerHTML =
+    "⏳ Đang điểm danh...";
 
+  const scriptURL = "https://script.google.com/macros/s/AKfycbwKlI0p45_90uuDnNJP0ukGOZY5nkMpknQvZevCZ4xmKi9NZeOLg5dxvKYZbjeR6ucZCQ/exec";
+  const callbackName = "xuLyDiemDanh";
+
+  window[callbackName] = function(data) {
+    if (data.success) {
+      if (data.duplicate) {
+        document.getElementById("result").innerHTML =
+          "⚠️ <b>" + data.name + "</b><br>" +
+          "Đã điểm danh hôm nay lúc " + data.time;
+      } else {
+        document.getElementById("result").innerHTML =
+          "✅ <b>" + data.name + "</b><br>" +
+          "Có mặt lúc " + data.time;
+      }
+    } else {
       document.getElementById("result").innerHTML =
-        "✅ Đã quét mã: <b>" + decodedText + "</b>";
-
+        "❌ " + data.message;
     }
+
+    delete window[callbackName];
+    script.remove();
+  };
+
+  const script = document.createElement("script");
+  script.src =
+    scriptURL +
+    "?code=" + encodeURIComponent(decodedText) +
+    "&callback=" + callbackName;
+
+  document.body.appendChild(script);
+}
 
     function onScanFailure(error) {
       // Không làm gì khi chưa nhận diện được mã
