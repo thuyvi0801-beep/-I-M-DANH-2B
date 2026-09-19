@@ -53,142 +53,180 @@
 
   <script>
 
-    const scriptURL =
-      "https://script.google.com/macros/s/AKfycbwhNlrCYWt2fHQic-JRqkShfqJjiThKWLbBTle4PWaSfJHdDk53f-LjOh9czuAtWNdk/exec";
+  const scriptURL =
+    "https://script.google.com/macros/s/AKfycbwhNlrCYWt2fHQic-JRqkShfqJjiThKWLbBTle4PWaSfJHdDk53f-LjOh9czuAtWNdk/exec";
 
-    let dangXuLy = false;
-    let webAppDaNong = false;
+  // Các mã đang chờ Google phản hồi
+  const dangCho = new Set();
 
-    function pingWebApp() {
+  // Không cho cùng một QR bị nhận liên tục trong vài giây
+  const vuaQuet = new Map();
 
-      const callbackName =
-        "pingDiemDanh_" + Date.now();
+  // Lưu các kết quả gần nhất
+  let lichSu = [];
 
-      const pingScript =
-        document.createElement("script");
+  function hienThi(message) {
 
-      window[callbackName] = function(data) {
+    lichSu.unshift(message);
 
-        webAppDaNong = true;
-
-        delete window[callbackName];
-
-        pingScript.remove();
-
-        document.getElementById("result").innerHTML =
-          "📷 Hệ thống sẵn sàng – Mời quét mã QR";
-      };
-
-      pingScript.src =
-        scriptURL +
-        "?ping=1&callback=" +
-        callbackName;
-
-      document.body.appendChild(pingScript);
+    if (lichSu.length > 8) {
+      lichSu = lichSu.slice(0, 8);
     }
 
-    function onScanSuccess(decodedText) {
+    document.getElementById("result").innerHTML =
+      lichSu.join("<hr>");
+  }
 
-      if (dangXuLy) return;
 
-      if (!webAppDaNong) {
+  function onScanSuccess(decodedText) {
 
-        document.getElementById("result").innerHTML =
-          "⏳ Hệ thống đang khởi động, vui lòng chờ...";
+    const maQR = String(decodedText || "").trim();
 
-        return;
-      }
+    if (!maQR) return;
 
-      dangXuLy = true;
 
-      document.getElementById("result").innerHTML =
-        "⏳ Đang điểm danh...";
+    // Nếu mã này đang chờ phản hồi thì không gửi lại
+    if (dangCho.has(maQR)) return;
 
-      const callbackName =
-        "xuLyDiemDanh_" + Date.now();
 
-      let script =
-        document.createElement("script");
+    // Chống camera nhận cùng một mã liên tục
+    const lanCuoi = vuaQuet.get(maQR);
 
-      window[callbackName] = function(data) {
+    if (lanCuoi && Date.now() - lanCuoi < 3000) {
+      return;
+    }
 
-        if (data.success) {
 
-          if (data.duplicate) {
+    vuaQuet.set(maQR, Date.now());
 
-            document.getElementById("result").innerHTML =
-              "⚠️ <b>" + data.name + "</b><br>" +
-              "Lớp: " + data.className + "<br>" +
-              "Đã điểm danh hôm nay lúc " + data.time;
+    dangCho.add(maQR);
 
-          } else {
 
-            document.getElementById("result").innerHTML =
-              "✅ <b>" + data.name + "</b><br>" +
-              "Lớp: " + data.className + "<br>" +
-              "Có mặt lúc " + data.time;
+    // Báo ngay lập tức - KHÔNG chờ Google
+    hienThi(
+      "📷 Đã nhận mã: <b>" +
+      maQR +
+      "</b><br>" +
+      "⏳ Đang gửi điểm danh..."
+    );
 
-          }
+
+    const callbackName =
+      "xuLyDiemDanh_" + Date.now() + "_" +
+      Math.random().toString(36).substring(2, 7);
+
+
+    const script =
+      document.createElement("script");
+
+
+    let daBaoCho = false;
+
+
+    // Sau 5 giây nếu Google chưa trả,
+    // camera vẫn tiếp tục cho quét bé khác
+    const timeout = setTimeout(function() {
+
+      if (daBaoCho) return;
+
+      daBaoCho = true;
+
+      hienThi(
+        "📡 Mã <b>" +
+        maQR +
+        "</b> đã được gửi.<br>" +
+        "Máy chủ đang phản hồi chậm, chị vẫn có thể quét bé tiếp theo."
+      );
+
+    }, 5000);
+
+
+    window[callbackName] = function(data) {
+
+      clearTimeout(timeout);
+
+
+      if (data.success) {
+
+        if (data.duplicate) {
+
+          hienThi(
+            "⚠️ <b>" + data.name + "</b><br>" +
+            "Lớp: " + data.className + "<br>" +
+            "Đã điểm danh hôm nay lúc " +
+            data.time
+          );
 
         } else {
 
-          document.getElementById("result").innerHTML =
-            "❌ " + data.message;
+          hienThi(
+            "✅ <b>" + data.name + "</b><br>" +
+            "Lớp: " + data.className + "<br>" +
+            "Có mặt lúc " +
+            data.time
+          );
+
         }
 
-        delete window[callbackName];
+      } else {
 
-        if (script) {
-          script.remove();
-        }
-
-        setTimeout(function() {
-          dangXuLy = false;
-        }, 1500);
-      };
-
-      script.src =
-        scriptURL +
-        "?code=" +
-        encodeURIComponent(decodedText) +
-        "&callback=" +
-        callbackName;
-
-      document.body.appendChild(script);
-    }
-
-    function onScanFailure(error) {
-    }
-
-    window.addEventListener("load", function() {
-
-      const scanner =
-        new Html5QrcodeScanner(
-          "reader",
-          {
-            fps: 10,
-            qrbox: {
-              width: 250,
-              height: 250
-            }
-          },
-          false
+        hienThi(
+          "❌ " + data.message
         );
 
-      scanner.render(
-        onScanSuccess,
-        onScanFailure
+      }
+
+
+      delete window[callbackName];
+
+      dangCho.delete(maQR);
+
+      script.remove();
+    };
+
+
+    // Gửi request điểm danh ở nền
+    script.src =
+      scriptURL +
+      "?code=" +
+      encodeURIComponent(maQR) +
+      "&callback=" +
+      callbackName;
+
+
+    document.body.appendChild(script);
+  }
+
+
+  function onScanFailure(error) {
+    // Không làm gì khi chưa nhận diện được QR
+  }
+
+
+  window.addEventListener("load", function() {
+
+    const scanner =
+      new Html5QrcodeScanner(
+        "reader",
+        {
+          fps: 10,
+          qrbox: {
+            width: 250,
+            height: 250
+          }
+        },
+        false
       );
 
-      pingWebApp();
 
-      setInterval(function() {
-        pingWebApp();
-      }, 4 * 60 * 1000);
+    scanner.render(
+      onScanSuccess,
+      onScanFailure
+    );
 
-    });
+  });
 
-  </script>
+</script>
 
 </body>
 </html>
