@@ -48,148 +48,147 @@
   <div id="reader"></div>
 
   <div id="result">
-    ⏳ Đang chờ quét...
+    ⏳ Đang khởi động hệ thống...
   </div>
 
- <script>
-const scriptURL = "https://script.google.com/macros/s/AKfycbwhNlrCYWt2fHQic-JRqkShfqJjiThKWLbBTle4PWaSfJHdDk53f-LjOh9czuAtWNdk/exec";
+  <script>
 
-let dangXuLy = false;
+    const scriptURL =
+      "https://script.google.com/macros/s/AKfycbwhNlrCYWt2fHQic-JRqkShfqJjiThKWLbBTle4PWaSfJHdDk53f-LjOh9czuAtWNdk/exec";
 
-function onScanSuccess(decodedText) {
-  if (dangXuLy) return;
+    let dangXuLy = false;
+    let webAppDaNong = false;
 
-  dangXuLy = true;
+    function pingWebApp() {
 
-  document.getElementById("result").innerHTML =
-    "⏳ Đang điểm danh...";
+      const callbackName =
+        "pingDiemDanh_" + Date.now();
 
-  const callbackName = "xuLyDiemDanh_" + Date.now();
+      const pingScript =
+        document.createElement("script");
 
-  const script = document.createElement("script");
+      window[callbackName] = function(data) {
 
-  window[callbackName] = function(data) {
-    if (data.success) {
-      if (data.duplicate) {
+        webAppDaNong = true;
+
+        delete window[callbackName];
+
+        pingScript.remove();
+
         document.getElementById("result").innerHTML =
-          "⚠️ <b>" + data.name + "</b><br>" +
-          "Lớp: " + data.className + "<br>" +
-          "Đã điểm danh hôm nay lúc " + data.time;
-      } else {
-        document.getElementById("result").innerHTML =
-          "✅ <b>" + data.name + "</b><br>" +
-          "Lớp: " + data.className + "<br>" +
-          "Có mặt lúc " + data.time;
-      }
-    } else {
-      document.getElementById("result").innerHTML =
-        "❌ " + data.message;
+          "📷 Hệ thống sẵn sàng – Mời quét mã QR";
+      };
+
+      pingScript.src =
+        scriptURL +
+        "?ping=1&callback=" +
+        callbackName;
+
+      document.body.appendChild(pingScript);
     }
 
-    delete window[callbackName];
-    script.remove();
+    function onScanSuccess(decodedText) {
 
-    setTimeout(function() {
-      dangXuLy = false;
-    }, 1500);
-  };
+      if (dangXuLy) return;
 
-  script.src =
-    scriptURL +
-    "?code=" + encodeURIComponent(decodedText) +
-    "&callback=" + callbackName;
-
-  document.body.appendChild(script);
-}
-
-function onScanFailure(error) {
-}
-
-window.addEventListener("load", function() {
-
-  const scanner = new Html5QrcodeScanner(
-    "reader",
-    {
-      fps: 10,
-      qrbox: {
-        width: 250,
-        height: 250
-      }
-    },
-    false
-  );
-
-  // ==============================
-  // ĐÁNH THỨC WEB APP V6
-  // ==============================
-
-  let webAppDaNong = false;
-
-  function pingWebApp() {
-
-    const callbackName =
-      "pingDiemDanh_" + Date.now();
-
-    const pingScript =
-      document.createElement("script");
-
-    window[callbackName] = function(data) {
-
-      webAppDaNong = true;
-
-      delete window[callbackName];
-
-      if (pingScript) {
-        pingScript.remove();
-      }
-
-      document.getElementById("result").innerHTML =
-        "📷 Hệ thống sẵn sàng – Mời quét mã QR";
-    };
-
-    pingScript.src =
-      scriptURL +
-      "?ping=1&callback=" +
-      callbackName;
-
-    document.body.appendChild(pingScript);
-  }
-
-  // Gọi ping ngay khi mở trang
-  pingWebApp();
-
-  // Giữ Web App luôn nóng
-  setInterval(function() {
-    pingWebApp();
-  }, 4 * 60 * 1000);
-
-  // ==============================
-  // KHỞI ĐỘNG MÁY QUÉT
-  // ==============================
-
-  scanner.render(
-    function(decodedText) {
-
-      // Nếu Web App chưa nóng thì chưa gửi mã
       if (!webAppDaNong) {
 
         document.getElementById("result").innerHTML =
-          "⏳ Hệ thống đang khởi động, vui lòng chờ một chút...";
+          "⏳ Hệ thống đang khởi động, vui lòng chờ...";
 
         return;
       }
 
-      onScanSuccess(decodedText);
+      dangXuLy = true;
 
-    },
-    onScanFailure
-  );
+      document.getElementById("result").innerHTML =
+        "⏳ Đang điểm danh...";
 
-});
+      const callbackName =
+        "xuLyDiemDanh_" + Date.now();
 
-  scanner.render(onScanSuccess, onScanFailure);
+      let script =
+        document.createElement("script");
 
-});
-</script>
+      window[callbackName] = function(data) {
+
+        if (data.success) {
+
+          if (data.duplicate) {
+
+            document.getElementById("result").innerHTML =
+              "⚠️ <b>" + data.name + "</b><br>" +
+              "Lớp: " + data.className + "<br>" +
+              "Đã điểm danh hôm nay lúc " + data.time;
+
+          } else {
+
+            document.getElementById("result").innerHTML =
+              "✅ <b>" + data.name + "</b><br>" +
+              "Lớp: " + data.className + "<br>" +
+              "Có mặt lúc " + data.time;
+
+          }
+
+        } else {
+
+          document.getElementById("result").innerHTML =
+            "❌ " + data.message;
+        }
+
+        delete window[callbackName];
+
+        if (script) {
+          script.remove();
+        }
+
+        setTimeout(function() {
+          dangXuLy = false;
+        }, 1500);
+      };
+
+      script.src =
+        scriptURL +
+        "?code=" +
+        encodeURIComponent(decodedText) +
+        "&callback=" +
+        callbackName;
+
+      document.body.appendChild(script);
+    }
+
+    function onScanFailure(error) {
+    }
+
+    window.addEventListener("load", function() {
+
+      const scanner =
+        new Html5QrcodeScanner(
+          "reader",
+          {
+            fps: 10,
+            qrbox: {
+              width: 250,
+              height: 250
+            }
+          },
+          false
+        );
+
+      scanner.render(
+        onScanSuccess,
+        onScanFailure
+      );
+
+      pingWebApp();
+
+      setInterval(function() {
+        pingWebApp();
+      }, 4 * 60 * 1000);
+
+    });
+
+  </script>
+
 </body>
 </html>
