@@ -53,148 +53,292 @@
 
   <script>
 
+<script>
+
   const scriptURL =
     "https://script.google.com/macros/s/AKfycbwhNlrCYWt2fHQic-JRqkShfqJjiThKWLbBTle4PWaSfJHdDk53f-LjOh9czuAtWNdk/exec";
 
-  // Các mã đang chờ Google phản hồi
+  // Các mã đã gửi lên máy chủ nhưng chưa nhận kết quả
   const dangCho = new Set();
 
-  // Không cho cùng một QR bị nhận liên tục trong vài giây
+  // Các mã vừa được camera nhận
   const vuaQuet = new Map();
 
-  // Lưu các kết quả gần nhất
-  let lichSu = [];
+  // Hàng đợi mã QR chờ gửi
+  const hangDoi = [];
 
+  // Các yêu cầu đang chạy song song
+  const dangGui = new Set();
+
+  // Thời gian gom mã trước khi gửi 1 batch
+  const THOI_GIAN_GOM = 800;
+
+  let timerGui = null;
+
+  // Hiển thị trạng thái
   function hienThi(message) {
 
-    lichSu.unshift(message);
-
-    if (lichSu.length > 8) {
-      lichSu = lichSu.slice(0, 8);
-    }
-
     document.getElementById("result").innerHTML =
-      lichSu.join("<hr>");
+      message;
   }
 
 
+  // =====================================================
+  // NHẬN QR
+  // =====================================================
+
   function onScanSuccess(decodedText) {
 
-    const maQR = String(decodedText || "").trim();
+    const maQR =
+      String(decodedText || "").trim();
 
     if (!maQR) return;
 
 
-    // Nếu mã này đang chờ phản hồi thì không gửi lại
+    // Không nhận lại mã đang chờ xử lý
     if (dangCho.has(maQR)) return;
 
 
-    // Chống camera nhận cùng một mã liên tục
-    const lanCuoi = vuaQuet.get(maQR);
+    // Chống camera đọc cùng QR nhiều lần trong vài giây
+    const lanCuoi =
+      vuaQuet.get(maQR);
 
-    if (lanCuoi && Date.now() - lanCuoi < 3000) {
+    if (
+      lanCuoi &&
+      Date.now() - lanCuoi < 3000
+    ) {
       return;
     }
 
 
-    vuaQuet.set(maQR, Date.now());
+    vuaQuet.set(
+      maQR,
+      Date.now()
+    );
 
     dangCho.add(maQR);
 
+    hangDoi.push(maQR);
 
-    // Báo ngay lập tức - KHÔNG chờ Google
+
+    // Báo NGAY cho người điểm danh
     hienThi(
-      "📷 Đã nhận mã: <b>" +
+      "✅ Đã nhận mã QR: <b>" +
       maQR +
       "</b><br>" +
-      "⏳ Đang gửi điểm danh..."
+      "⏳ Đang cập nhật..."
     );
 
 
+    // Gom các mã quét trong 0,8 giây
+    if (!timerGui) {
+
+      timerGui = setTimeout(
+        guiBatch,
+        THOI_GIAN_GOM
+      );
+
+    }
+
+  }
+
+
+  // =====================================================
+  // GỬI BATCH
+  // =====================================================
+
+  function guiBatch() {
+
+    timerGui = null;
+
+
+    if (hangDoi.length === 0) {
+      return;
+    }
+
+
+    // Lấy tối đa 10 mã mỗi lần
+    const codes =
+      hangDoi.splice(0, 10);
+
+
+    if (codes.length === 0) {
+      return;
+    }
+
+
+    const batchId =
+      "batch_" +
+      Date.now() +
+      "_" +
+      Math.random()
+        .toString(36)
+        .substring(2, 7);
+
+
+    dangGui.add(batchId);
+
+
     const callbackName =
-      "xuLyDiemDanh_" + Date.now() + "_" +
-      Math.random().toString(36).substring(2, 7);
+      "xuLyBatch_" +
+      batchId;
 
 
     const script =
       document.createElement("script");
 
 
-    let daBaoCho = false;
+    window[callbackName] =
+      function(data) {
+
+        try {
+
+          if (
+            data &&
+            data.success &&
+            Array.isArray(data.results)
+          ) {
+
+            let html = "";
+
+            data.results.forEach(
+              function(item) {
+
+                const ma =
+                  item.code || "";
+
+                if (
+                  item.success &&
+                  item.duplicate
+                ) {
+
+                  html +=
+                    "⚠️ <b>" +
+                    (item.name || ma) +
+                    "</b><br>" +
+                    "Lớp: " +
+                    (item.className || "") +
+                    "<br>" +
+                    "Đã điểm danh lúc " +
+                    (item.time || "") +
+                    "<hr>";
+
+                }
+
+                else if (
+                  item.success
+                ) {
+
+                  html +=
+                    "✅ <b>" +
+                    (item.name || ma) +
+                    "</b><br>" +
+                    "Lớp: " +
+                    (item.className || "") +
+                    "<br>" +
+                    "Có mặt lúc " +
+                    (item.time || "") +
+                    "<hr>";
+
+                }
+
+                else {
+
+                  html +=
+                    "❌ " +
+                    (item.message || ma) +
+                    "<hr>";
+
+                }
 
 
-    // Sau 5 giây nếu Google chưa trả,
-    // camera vẫn tiếp tục cho quét bé khác
-    const timeout = setTimeout(function() {
-
-      if (daBaoCho) return;
-
-      daBaoCho = true;
-
-      hienThi(
-        "📡 Mã <b>" +
-        maQR +
-        "</b> đã được gửi.<br>" +
-        "Máy chủ đang phản hồi chậm, chị vẫn có thể quét bé tiếp theo."
-      );
-
-    }, 5000);
+                // Cho phép mã này được xử lý lại
+                // nếu camera nhận vào một lần khác
+                dangCho.delete(ma);
+              }
+            );
 
 
-    window[callbackName] = function(data) {
+            if (html) {
+              hienThi(html);
+            }
 
-      clearTimeout(timeout);
+          }
 
+          else {
 
-      if (data.success) {
+            hienThi(
+              "⚠️ Máy chủ đã nhận yêu cầu<br>" +
+              "Chị có thể tiếp tục quét."
+            );
 
-        if (data.duplicate) {
+          }
 
-          hienThi(
-            "⚠️ <b>" + data.name + "</b><br>" +
-            "Lớp: " + data.className + "<br>" +
-            "Đã điểm danh hôm nay lúc " +
-            data.time
-          );
+        }
 
-        } else {
+        catch (error) {
 
-          hienThi(
-            "✅ <b>" + data.name + "</b><br>" +
-            "Lớp: " + data.className + "<br>" +
-            "Có mặt lúc " +
-            data.time
+          console.error(
+            "Lỗi callback:",
+            error
           );
 
         }
 
-      } else {
 
-        hienThi(
-          "❌ " + data.message
-        );
+        delete window[callbackName];
 
-      }
+        dangGui.delete(batchId);
 
-
-      delete window[callbackName];
-
-      dangCho.delete(maQR);
-
-      script.remove();
-    };
+        script.remove();
 
 
-    // Gửi request điểm danh ở nền
+        // Nếu trong lúc gửi đã quét thêm bé
+        // thì gửi batch tiếp theo
+        if (hangDoi.length > 0) {
+
+          if (!timerGui) {
+
+            timerGui = setTimeout(
+              guiBatch,
+              300
+            );
+
+          }
+
+        }
+
+      };
+
+
     script.src =
       scriptURL +
-      "?code=" +
-      encodeURIComponent(maQR) +
+      "?codes=" +
+      encodeURIComponent(
+        codes.join(",")
+      ) +
       "&callback=" +
       callbackName;
 
 
     document.body.appendChild(script);
+
+
+    // Nếu đang gửi mà đã có thêm mã
+    // thì không cần chờ callback
+    if (hangDoi.length > 0) {
+
+      if (!timerGui) {
+
+        timerGui = setTimeout(
+          guiBatch,
+          THOI_GIAN_GOM
+        );
+
+      }
+
+    }
+
   }
 
 
@@ -203,30 +347,41 @@
   }
 
 
-  window.addEventListener("load", function() {
+  // =====================================================
+  // KHỞI ĐỘNG CAMERA
+  // =====================================================
 
-    const scanner =
-      new Html5QrcodeScanner(
-        "reader",
-        {
-          fps: 10,
-          qrbox: {
-            width: 250,
-            height: 250
-          }
-        },
-        false
+  window.addEventListener(
+    "load",
+    function() {
+
+      const scanner =
+        new Html5QrcodeScanner(
+          "reader",
+          {
+            fps: 10,
+            qrbox: {
+              width: 250,
+              height: 250
+            }
+          },
+          false
+        );
+
+
+      scanner.render(
+        onScanSuccess,
+        onScanFailure
       );
 
 
-    scanner.render(
-      onScanSuccess,
-      onScanFailure
-    );
+      hienThi(
+        "📷 Hệ thống sẵn sàng – Mời quét mã QR"
+      );
 
-  });
+    }
+  );
 
 </script>
-
 </body>
 </html>
