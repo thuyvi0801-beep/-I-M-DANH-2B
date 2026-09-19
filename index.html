@@ -119,6 +119,74 @@ window.addEventListener("load", function() {
     false
   );
 
+  // ==============================
+  // ĐÁNH THỨC WEB APP V6
+  // ==============================
+
+  let webAppDaNong = false;
+
+  function pingWebApp() {
+
+    const callbackName =
+      "pingDiemDanh_" + Date.now();
+
+    const pingScript =
+      document.createElement("script");
+
+    window[callbackName] = function(data) {
+
+      webAppDaNong = true;
+
+      delete window[callbackName];
+
+      if (pingScript) {
+        pingScript.remove();
+      }
+
+      document.getElementById("result").innerHTML =
+        "📷 Hệ thống sẵn sàng – Mời quét mã QR";
+    };
+
+    pingScript.src =
+      scriptURL +
+      "?ping=1&callback=" +
+      callbackName;
+
+    document.body.appendChild(pingScript);
+  }
+
+  // Gọi ping ngay khi mở trang
+  pingWebApp();
+
+  // Giữ Web App luôn nóng
+  setInterval(function() {
+    pingWebApp();
+  }, 4 * 60 * 1000);
+
+  // ==============================
+  // KHỞI ĐỘNG MÁY QUÉT
+  // ==============================
+
+  scanner.render(
+    function(decodedText) {
+
+      // Nếu Web App chưa nóng thì chưa gửi mã
+      if (!webAppDaNong) {
+
+        document.getElementById("result").innerHTML =
+          "⏳ Hệ thống đang khởi động, vui lòng chờ một chút...";
+
+        return;
+      }
+
+      onScanSuccess(decodedText);
+
+    },
+    onScanFailure
+  );
+
+});
+
   scanner.render(onScanSuccess, onScanFailure);
 
 });
