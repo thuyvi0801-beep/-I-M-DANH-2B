@@ -1,231 +1,25 @@
 <!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hệ thống điểm danh QR</title>
 
-  <script>
+<html lang="vi"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Hệ thống điểm danh QR</title>
 
-  let dangXuLy = false;
+<!-- Thư viện quét QR -->
 
-  // WEB APP V6
- 
-   const scriptURL =
-  "https://script.google.com/macros/s/AKfycbwhNlrCYWt2fHQic-JRqkShfqJjiThKWLbBTle4PWaSfJHdDk53f-LjOh9czuAtWNdk/exec";
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
-  function onScanSuccess(decodedText) {
+<style> body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background: #f5f5f5; } h1 { font-size: 24px; } #reader { width: 100%; max-width: 450px; margin: 20px auto; background: white; border-radius: 12px; padding: 10px; } #result { margin: 20px auto; max-width: 450px; padding: 15px; background: white; border-radius: 12px; font-size: 18px; } </style>
 
-    if (dangXuLy) return;
-
-    dangXuLy = true;
-
-    document.getElementById("result").innerHTML =
-      "⏳ Đang điểm danh...";
-
-    const callbackName =
-      "xuLyDiemDanh_" + Date.now();
-
-    window[callbackName] = function(data) {
-
-      if (data.success) {
-
-        if (data.duplicate) {
-
-          document.getElementById("result").innerHTML =
-            "⚠️ <b>" + data.name + "</b><br>" +
-            "Lớp: " + data.className + "<br>" +
-            "Đã điểm danh hôm nay lúc " + data.time;
-
-        } else {
-
-          document.getElementById("result").innerHTML =
-            "✅ <b>" + data.name + "</b><br>" +
-            "Lớp: " + data.className + "<br>" +
-            "Có mặt lúc " + data.time;
-
-        }
-
-      } else {
-
-        document.getElementById("result").innerHTML =
-          "❌ " + data.message;
-
-      }
-
-      delete window[callbackName];
-
-      if (script) {
-        script.remove();
-      }
-
-      setTimeout(function() {
-        dangXuLy = false;
-      }, 1500);
-    };
-
-    const script = document.createElement("script");
-
-    script.src =
-      scriptURL +
-      "?code=" + encodeURIComponent(decodedText) +
-      "&callback=" + callbackName;
-
-    document.body.appendChild(script);
-  }
-
-  function onScanFailure(error) {
-    // Không làm gì khi chưa nhận diện được mã
-  }
-
-  const scanner = new Html5QrcodeScanner(
-    "reader",
-    {
-      fps: 10,
-      qrbox: {
-        width: 250,
-        height: 250
-      }
-    },
-    false
-  );
-
-  scanner.render(onScanSuccess, onScanFailure);
-
-</script>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
-      background: #f5f5f5;
-    }
-
-    h1 {
-      font-size: 24px;
-    }
-
-    #reader {
-      width: 100%;
-      max-width: 450px;
-      margin: 20px auto;
-      background: white;
-      border-radius: 12px;
-      padding: 10px;
-    }
-
-    #result {
-      margin: 20px auto;
-      max-width: 450px;
-      padding: 15px;
-      background: white;
-      border-radius: 12px;
-      font-size: 18px;
-    }
-  </style>
 </head>
 
 <body>
 
-  <h1>📋 HỆ THỐNG ĐIỂM DANH QR</h1>
+<h1>📋 HỆ THỐNG ĐIỂM DANH QR</h1>
 
-  <p>Đưa mã QR của các em vào khung quét</p>
+<p>Đưa mã QR của các em vào khung quét</p>
 
-  <div id="reader"></div>
+<div id="reader"></div>
 
-  <div id="result">
-    ⏳ Đang chờ quét...
-  </div>
+<div id="result"> ⏳ Đang chờ quét... </div>
 
-  <script>
+<script> let dangXuLy = false; // WEB APP V6 const scriptURL = "https://script.google.com/macros/s/AKfycbwhNlrCYWt2fHQic-JRqkShfqJjiThKWLbBTle4PWaSfJHdDk53f-LjOh9czuAtWNdk/exec"; function onScanSuccess(decodedText) { if (dangXuLy) return; dangXuLy = true; document.getElementById("result").innerHTML = "⏳ Đang điểm danh..."; const callbackName = "xuLyDiemDanh_" + Date.now(); let script = null; window[callbackName] = function(data) { if (data.success) { if (data.duplicate) { document.getElementById("result").innerHTML = "⚠️ <b>" + data.name + "</b><br>" + "Lớp: " + data.className + "<br>" + "Đã điểm danh hôm nay lúc " + data.time; } else { document.getElementById("result").innerHTML = "✅ <b>" + data.name + "</b><br>" + "Lớp: " + data.className + "<br>" + "Có mặt lúc " + data.time; } } else { document.getElementById("result").innerHTML = "❌ " + data.message; } delete window[callbackName]; if (script) { script.remove(); } setTimeout(function() { dangXuLy = false; }, 1500); }; script = document.createElement("script"); script.src = scriptURL + "?code=" + encodeURIComponent(decodedText) + "&callback=" + callbackName; document.body.appendChild(script); } function onScanFailure(error) { // Không làm gì khi chưa nhận diện được mã } const scanner = new Html5QrcodeScanner( "reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false ); scanner.render(onScanSuccess, onScanFailure); </script>
 
-    let dangXuLy = false;
-
-    function onScanSuccess(decodedText) {
-
-      if (dangXuLy) return;
-
-      dangXuLy = true;
-
-      document.getElementById("result").innerHTML =
-        "⏳ Đang điểm danh...";
-
-     const scriptURL =
-  "https://script.google.com/macros/s/AKfycbwhNlrCYWt2fHQic-JRqkShfqJjiThKWLbBTle4PWaSfJHdDk53f-LjOh9czuAtWNdk/exec";
-
-
-
-      const callbackName =
-        "xuLyDiemDanh_" + Date.now();
-
-      window[callbackName] = function(data) {
-
-        if (data.success) {
-
-          if (data.duplicate) {
-
-            document.getElementById("result").innerHTML =
-              "⚠️ <b>" + data.name + "</b><br>" +
-              "Lớp: " + data.className + "<br>" +
-              "Đã điểm danh hôm nay lúc " + data.time;
-
-          } else {
-
-            document.getElementById("result").innerHTML =
-              "✅ <b>" + data.name + "</b><br>" +
-              "Lớp: " + data.className + "<br>" +
-              "Có mặt lúc " + data.time;
-
-          }
-
-        } else {
-
-          document.getElementById("result").innerHTML =
-            "❌ " + data.message;
-
-        }
-
-        delete window[callbackName];
-
-        if (script) {
-          script.remove();
-        }
-
-        setTimeout(function() {
-          dangXuLy = false;
-        }, 1500);
-      };
-
-      const script = document.createElement("script");
-
-      script.src =
-        scriptURL +
-        "?code=" + encodeURIComponent(decodedText) +
-        "&callback=" + callbackName;
-
-      document.body.appendChild(script);
-    }
-
-    function onScanFailure(error) {
-      // Không làm gì khi chưa nhận diện được mã
-    }
-
-    const scanner = new Html5QrcodeScanner(
-      "reader",
-      {
-        fps: 10,
-        qrbox: {
-          width: 250,
-          height: 250
-        }
-      },
-      false
-    );
-
-    scanner.render(onScanSuccess, onScanFailure);
-
-  </script>
-
-</body>
-</html>
+</body> </html>
